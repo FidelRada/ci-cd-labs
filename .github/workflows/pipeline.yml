@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
   hello-ci:
@@ -29,6 +32,9 @@ jobs:
 
       - name: Mostrar versión de Git
         run: git --version
+
+      - name: Paso experimental (Laboratorio 2, Parte 8)
+        run: echo "Paso corregido - ya no ejecuta un comando inexistente."
 
       - name: Finalizar pipeline
         run: echo "Pipeline ejecutado correctamente."
