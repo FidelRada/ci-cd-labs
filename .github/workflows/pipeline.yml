@@ -33,5 +33,8 @@ jobs:
       - name: Mostrar versión de Git
         run: git --version
 
+      - name: Paso experimental (Laboratorio 2, Parte 8)
+        run: comando-que-no-existe --version
+
       - name: Finalizar pipeline
         run: echo "Pipeline ejecutado correctamente."
