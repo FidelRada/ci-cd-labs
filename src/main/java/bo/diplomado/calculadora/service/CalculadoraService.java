@@ -17,7 +17,9 @@ public class CalculadoraService {
     }
 
     public double restar(double a, double b) {
-        return a - b;
+        // BUG deliberado (Laboratorio 3, Parte 4): suma en vez de restar.
+        // Compila perfectamente, pero rompe las pruebas de restar().
+        return a + b;
     }
 
     public double multiplicar(double a, double b) {
