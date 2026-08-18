@@ -1,4 +1,4 @@
-name: Primer Pipeline CI
+name: Pipeline CI
 
 on:
   push:
@@ -9,32 +9,100 @@ on:
       - main
 
 jobs:
-  hello-ci:
-    name: Hello CI
+  # ---------------------------------------------------------------
+  # Etapa 1: compilación. Si el código no compila, no se prueba nada.
+  # ---------------------------------------------------------------
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
       - name: Mostrar información del entorno
         run: |
           echo "================================"
-          echo "      PRIMER PIPELINE CI"
+          echo "      PIPELINE CI - BUILD"
           echo "================================"
           echo "Repositorio: ${{ github.repository }}"
           echo "Rama: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
+          echo "Evento: ${{ github.event_name }}"
           echo "================================"
 
-      - name: Mostrar fecha y hora
-        run: date
+      - name: Compilar la aplicación
+        run: ./mvnw -B clean compile
 
-      - name: Mostrar versión de Git
-        run: git --version
+      - name: Compilación finalizada
+        run: echo "Compilación completada correctamente."
 
-      - name: Paso experimental (Laboratorio 2, Parte 8)
-        run: echo "Paso corregido - ya no ejecuta un comando inexistente."
+  # ---------------------------------------------------------------
+  # Etapa 2: pruebas. `needs: build` garantiza que solo se ejecuta
+  # cuando la compilación terminó correctamente.
+  # ---------------------------------------------------------------
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
 
-      - name: Finalizar pipeline
-        run: echo "Pipeline ejecutado correctamente."
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Si alguna prueba falla, este paso devuelve un código de salida
+      # distinto de cero y el pipeline se detiene aquí.
+      - name: Ejecutar pruebas unitarias
+        run: ./mvnw -B test
+
+      # `if: always()` regenera el reporte incluso cuando las pruebas
+      # fallaron, para que la evidencia siga estando disponible.
+      - name: Generar reporte de cobertura
+        if: always()
+        run: ./mvnw -B jacoco:report
+
+      - name: Quality Gate - verificar cobertura mínima
+        run: ./mvnw -B jacoco:check
+
+      - name: Publicar reporte de pruebas
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-pruebas
+          path: target/surefire-reports/
+          if-no-files-found: warn
+
+      - name: Publicar reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-cobertura
+          path: target/site/jacoco/
+          if-no-files-found: warn
+
+      - name: Resumen de la ejecución
+        if: always()
+        run: |
+          echo "================================"
+          echo "  RESULTADO DE LAS PRUEBAS"
+          echo "================================"
+          if [ -d target/surefire-reports ]; then
+            grep -h "Tests run" target/surefire-reports/*.txt || true
+          else
+            echo "No se generaron reportes de pruebas."
+          fi
+          echo "================================"
